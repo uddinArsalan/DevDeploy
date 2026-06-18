@@ -26,6 +26,7 @@ func NewClient(client *client.Client) *DeployHandler{
 }
 
 func(h *DeployHandler) Deploy(w http.ResponseWriter,r *http.Request){
+	// the respective code should move into a service 
 	var url UserURL
 	var imageTag = os.Getenv("IMAGE_TAG")
 	var projectID = 123 // needs to be unique per project
@@ -36,6 +37,8 @@ func(h *DeployHandler) Deploy(w http.ResponseWriter,r *http.Request){
 		http.Error(w,"Invalid url",http.StatusBadRequest)
 		return
 	}
+	// BUILDER CONTAINER :
+	// this container will stop after building the image 
 	res,err := h.client.ContainerCreate(r.Context(),client.ContainerCreateOptions{
 		Image: imageTag,
 		Config: &container.Config{
@@ -53,22 +56,31 @@ func(h *DeployHandler) Deploy(w http.ResponseWriter,r *http.Request){
 			Binds: []string{"/var/run/docker.sock.raw:/var/run/docker.sock"},
 		},
 	})
+	
 	if err != nil{
 		fmt.Printf("Error creating builder container %v",err)
 		http.Error(w,err.Error(),http.StatusInternalServerError)
 		return
 	}
-	_,err = h.client.ContainerStart(r.Context(),res.ID,client.ContainerStartOptions{
-
-	})
+	_,err = h.client.ContainerStart(r.Context(),res.ID,client.ContainerStartOptions{})
 	if err != nil{
 		fmt.Printf("Error starting builder container %v",err)
 		http.Error(w,err.Error(),http.StatusInternalServerError)
 		return
 	}
 
+	waitRes := client.APIClient.ContainerWait(h.client,r.Context(),res.ID,client.ContainerWaitOptions{})
+
+	select {
+	case  <- waitRes.Result:
+		fmt.Print("Build container completed successfully")
+	case <- waitRes.Error :
+		fmt.Printf("Build container error %v",waitRes.Error)
+	}
+
+	// APPLICATION CONTAINER :
 	finalRes,err := h.client.ContainerCreate(r.Context(),client.ContainerCreateOptions{
-		Image: fmt.Sprintf("deployment-%v",projectID),
+		Image: fmt.Sprintf("deployment-image-%v",projectID),
 		HostConfig: &container.HostConfig{
 			PortBindings: network.PortMap{
 				port : []network.PortBinding{
@@ -102,4 +114,22 @@ func(h *DeployHandler) Deploy(w http.ResponseWriter,r *http.Request){
 	}
 
 	json.NewEncoder(w).Encode(resp)
+}
+
+type DeployReqDTO struct{
+	DeployID string `json:"deploy_id"`
+}
+
+func (h *DeployHandler) StopDeploy(w http.ResponseWriter,r *http.Request){
+	var deployIDReq DeployReqDTO 
+	err := json.NewDecoder(r.Body).Decode(&deployIDReq)
+	if err != nil {
+		http.Error(w,"Error reading deploy id",http.StatusBadRequest)
+		return
+	}
+	_,err = h.client.ContainerStop(r.Context(),deployIDReq.DeployID,client.ContainerStopOptions{})
+	if err != nil {
+		http.Error(w,"There was an error stopping deploy request",http.StatusInternalServerError)
+		return
+	}
 }
