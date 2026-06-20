@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/moby/moby/client"
 	"github.com/uddinArsalan/devdeploy/internals/handlers"
+	"github.com/uddinArsalan/devdeploy/internals/services"
 )
 
 func main() {
@@ -16,7 +17,8 @@ func main() {
 	}
 	mux := http.NewServeMux()
 	newClient, _ := client.New(client.FromEnv)
-	deployHandler := handlers.NewClient(newClient)
+	deployService := services.NewDeployService(newClient)
+	deployHandler := handlers.NewDeployHandler(deployService)
 	mux.Handle("POST /deploy", http.HandlerFunc(deployHandler.Deploy))
 	server := &http.Server{
 		Addr:    ":3000",
