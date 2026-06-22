@@ -2,23 +2,23 @@ package sse
 
 import "sync"
 
-type UserChan struct {
+type LogChan struct {
 	mu      sync.Mutex
-	UserMap map[string]chan interface{}
+	LogsMap map[string]chan interface{}
 }
 
-func NewSSE() *UserChan {
-	return &UserChan{
-		UserMap: make(map[string]chan interface{}),
+func NewSSE() *LogChan {
+	return &LogChan{
+		LogsMap: make(map[string]chan interface{}),
 	}
 }
 
-func (u *UserChan) Notify(userId string,data interface{}){
+func (u *LogChan) Notify(deploymentId string,data interface{}){
 	u.mu.Lock()
-	ch, ok := u.UserMap[userId]
+	ch, ok := u.LogsMap[deploymentId]
 	if !ok {
 		ch = make(chan interface{},10)
-		u.UserMap[userId] = ch
+		u.LogsMap[deploymentId] = ch
 	}
 	u.mu.Unlock()
 	select {
@@ -27,24 +27,24 @@ func (u *UserChan) Notify(userId string,data interface{}){
 	}
 }
 
-func (u *UserChan) AddUser(userId string) chan interface{} {
+func (u *LogChan) AddUser(deploymentId string) chan interface{} {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
-	ch, ok := u.UserMap[userId]
+	ch, ok := u.LogsMap[deploymentId]
 	if ok {
 		return ch
 	}
 	// buffered chan for storing logs per user to stream via sse
 	newCh := make(chan interface{}, 10)
-	u.UserMap[userId] = newCh
+	u.LogsMap[deploymentId] = newCh
 	return newCh
 }
 
-func (u *UserChan) RemoveUser(userId string) {
+func (u *LogChan) RemoveUser(deploymentId string) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	delete(u.UserMap, userId)
+	delete(u.LogsMap, deploymentId)
 }
 
 
