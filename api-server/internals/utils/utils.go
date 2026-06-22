@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 )
@@ -32,4 +34,12 @@ func FAIL(w http.ResponseWriter, status int, msg string) {
 		Success: false,
 		Error:   msg,
 	})
+}
+
+func GenerateRandomID() (string, error) {
+	bytes := make([]byte, 6)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }

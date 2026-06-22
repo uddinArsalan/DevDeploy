@@ -1,0 +1,6 @@
+CREATE TABLE projects (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    git_url TEXT NOT NULL ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)

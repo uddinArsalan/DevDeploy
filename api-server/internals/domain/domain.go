@@ -1,6 +1,11 @@
 package domain
 
 type DeployResponse struct {
-	DynamicPort string
-	DeploymentID string
+	Url string
+}
+
+type BuildJob struct{
+	GitURL string
+	ProjectID string 
+	Slug string
 }

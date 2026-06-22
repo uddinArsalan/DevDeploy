@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -41,8 +40,7 @@ func (h *DeployHandler) Deploy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.SUCCESS(w, http.StatusOK, "Deploy started, The app will be available at the following url", dto.DeployResponse{
-		Url:      fmt.Sprintf("http://localhost:%v", deployRes.DynamicPort),
-		DeployID: deployRes.DeploymentID,
+		Url:      deployRes.Url,
 	})
 }
 
