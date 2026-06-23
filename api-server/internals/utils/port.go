@@ -4,22 +4,22 @@ import "sync"
 
 // for now I keep the port to host map locally
 type Domain struct {
-	ProjectID    string
+	ProjectID   int64
 	ContainerID string
-	Port        string
+	Port        int
 }
 
 type PortMap struct {
-	MinPort        int64
-	MaxPort        int64
+	MinPort        int
+	MaxPort        int
 	mu             sync.Mutex
-	AvailablePorts map[int64]bool
+	AvailablePorts map[int]bool
 	PortMapping    map[string]Domain // map of hostname to domain info
 }
 
-func NewPortMap(minPort int64, maxPort int64) *PortMap {
+func NewPortMap(minPort int, maxPort int) *PortMap {
 	portMap := PortMap{MinPort: minPort, MaxPort: maxPort}
-	portMap.AvailablePorts = make(map[int64]bool)
+	portMap.AvailablePorts = make(map[int]bool)
 	for j := minPort; j <= maxPort; j++ {
 		portMap.AvailablePorts[j] = true
 	}
@@ -27,7 +27,7 @@ func NewPortMap(minPort int64, maxPort int64) *PortMap {
 	return &portMap
 }
 
-func (p *PortMap) GetPort() int64 {
+func (p *PortMap) GetPort() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for port, avlbl := range p.AvailablePorts {
@@ -39,18 +39,18 @@ func (p *PortMap) GetPort() int64 {
 	return -1
 }
 
-func (p *PortMap) AssignProjectIDToDomain(projectID string, hostname string, containerID string, port string) {
+func (p *PortMap) AssignProjectIDToDomain(projectID int64, hostname string, containerID string, port int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	p.PortMapping[hostname] = Domain{
-		ProjectID:    projectID,
+		ProjectID:   projectID,
 		ContainerID: containerID,
 		Port:        port,
 	}
 }
 
-func (p *PortMap) ReleasePort(hostname string){
+func (p *PortMap) ReleasePort(hostname string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.PortMapping[hostname] = Domain{}

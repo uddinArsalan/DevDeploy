@@ -10,28 +10,29 @@ import (
 	"github.com/sio/coolname"
 	"github.com/uddinArsalan/devdeploy/internals/domain"
 	"github.com/uddinArsalan/devdeploy/internals/handlers/dto"
-	"github.com/uddinArsalan/devdeploy/internals/utils"
+	"github.com/uddinArsalan/devdeploy/internals/repository"
 )
 
 type DeployService struct {
 	client  *client.Client
-	portMap *utils.PortMap
+	projectRepo repository.ProjectRepository
+	deployRepo repository.DeploymentRepository
 }
 
-func NewDeployService(client *client.Client, portMap *utils.PortMap) *DeployService {
+func NewDeployService(client *client.Client,projectRepo repository.ProjectRepository,deployRepo repository.DeploymentRepository) *DeployService {
 	return &DeployService{
 		client:  client,
-		portMap: portMap,
+		projectRepo: projectRepo,
+		deployRepo : deployRepo,
 	}
 }
 
-func (ds *DeployService) Deploy(ctx context.Context, imageTag string, url dto.UserURLReqDTO) (*domain.DeployResponse, error) {
-	slug, err := coolname.Slug()
+func (ds *DeployService) Deploy(ctx context.Context, imageTag string,projectID int64) (*dto.DeployResponse, error) {
+	project,err := ds.projectRepo.GetProjectByID(ctx,projectID)
 	if err != nil {
-		return nil, err
+		return nil,err
 	}
-
-	projectID, err := utils.GenerateRandomID()
+	slug, err := coolname.Slug()
 	if err != nil {
 		return nil, err
 	}
@@ -40,22 +41,36 @@ func (ds *DeployService) Deploy(ctx context.Context, imageTag string, url dto.Us
 	hostName := fmt.Sprintf("%v.%v", slug, dom)
 
 
+	deployID ,err := ds.deployRepo.CreateDeploymentRecord(ctx,hostName,projectID)
+	if err != nil{
+		return nil,err
+	}
+
 	// Pass job to the worker to process
 	job := domain.BuildJob{
-		GitURL: url.GitURL,
+		GitURL: project.GitUrl,
 		ProjectID: projectID,
+		DeployID : deployID,
 		Slug: slug,
 	}
 
-	return &domain.DeployResponse{
-		Url: hostName,
+	return &dto.DeployResponse{
+		DeployID: deployID,
+		URL: hostName,
 	}, err
 }
 
-func (ds *DeployService) StopDeploy(ctx context.Context, deployID string) error {
-	_, err := ds.client.ContainerStop(ctx, deployID, client.ContainerStopOptions{})
+func (ds *DeployService) StopDeploy(ctx context.Context, deployID int64) error {
+	deployment,err := ds.deployRepo.GetDeploymentByID(ctx,deployID)
+	if err != nil {
+		return nil
+	}
+	_, err = ds.client.ContainerStop(ctx, deployment.ContainerID, client.ContainerStopOptions{})
 	if err != nil {
 		return errors.New("There was an error stopping deploy request")
+	}
+	if err = ds.deployRepo.UpdateDeploymentStatus(ctx,deployID,domain.StatusStopped);err != nil{
+		return err
 	}
 	return nil
 }

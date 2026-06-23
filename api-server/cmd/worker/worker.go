@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"sync"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"github.com/uddinArsalan/devdeploy/internals/domain"
+	"github.com/uddinArsalan/devdeploy/internals/repository"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )
 
@@ -22,6 +22,7 @@ type DeployWorker struct {
 	jobBuildChan chan domain.BuildJob
 	client       *client.Client
 	portMap      *utils.PortMap
+	deployRepo   *repository.DeploymentRepository
 }
 
 func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
@@ -36,9 +37,16 @@ func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
 				fmt.Printf("Worker %d: jobs channel closed, exiting\n", w.Id)
 				return
 			}
+			if err := w.deployRepo.UpdateDeploymentStatus(ctx, job.DeployID, domain.StatusBuilding); err != nil {
+				fmt.Printf("Error updating deployment status %v", err.Error())
+				return
+			}
 			err := w.processBuildJob(ctx, job)
 			if err != nil {
 				fmt.Printf("Error processing build job by worker %d", w.Id)
+				if err := w.deployRepo.UpdateDeploymentStatus(ctx, job.DeployID, domain.StatusFailed); err != nil {
+					fmt.Printf("Error updating deployment status %v", err.Error())
+				}
 				return
 			}
 		}
@@ -53,7 +61,6 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 	if port == -1 {
 		return errors.New("No available ports to listen to")
 	}
-	var dynamicPort = strconv.FormatInt(port, 10)
 
 	hostName := fmt.Sprintf("%v.%v", job.Slug, dom)
 
@@ -106,7 +113,7 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 			PortBindings: network.PortMap{
 				appPort: []network.PortBinding{
 					{
-						HostPort: dynamicPort,
+						HostPort: string(port),
 					},
 				},
 			},
@@ -124,7 +131,7 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 
 	go w.streamLogs(finalRes.ID)
 
-	w.portMap.AssignProjectIDToDomain(job.ProjectID, hostName, finalRes.ID, dynamicPort)
+	w.portMap.AssignProjectIDToDomain(job.ProjectID, hostName, finalRes.ID, int(port))
 	return nil
 }
 
