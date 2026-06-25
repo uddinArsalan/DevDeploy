@@ -27,7 +27,7 @@ func (h *DeployHandler) Deploy(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&deployReq)
 
 	if err != nil {
-		http.Error(w, "Invalid url", http.StatusBadRequest)
+		utils.FAIL(w,http.StatusBadRequest,"Invalid Project ID")
 		return
 	}
 

@@ -78,3 +78,17 @@ func (repo *DeploymentRepository) GetDeploymentByID(ctx context.Context, deployI
 	}
 	return deployment, nil
 }
+
+func (repo *DeploymentRepository) UpdateDeploymentRunning(ctx context.Context, port int, containerID string, status domain.DeploymentStatus,deployID int64) error {
+	query :=
+		`UPDATE deployments
+			SET port = $1,
+					container_id = $2,
+						status = $3,
+			WHERE id = $4;
+			`
+	if _, err := repo.db.Exec(ctx, query, port, containerID, status,deployID); err != nil {
+		return err
+	}
+	return nil
+}

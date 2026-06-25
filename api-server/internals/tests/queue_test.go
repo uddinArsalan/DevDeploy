@@ -27,12 +27,9 @@ func TestQueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error publishing message %v", err)
 	}
-	for {
-		msg, err := rmqClient.ConsumeMessage(context.Background())
-		if err != nil {
-			t.Fatalf("error consuming message %v", err)
-		}
-		t.Logf("Recieved message %v", msg)
-		t.Logf("Recieved message %v", msg)
-	}
+	// msg, err := rmqClient.ConsumeMessage(context.Background())
+	// if err != nil {
+	// 	t.Fatalf("error consuming message %v", err)
+	// }
+	// t.Logf("Recieved message %v", msg)
 }

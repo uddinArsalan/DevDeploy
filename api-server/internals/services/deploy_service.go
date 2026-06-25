@@ -8,6 +8,7 @@ import (
 
 	"github.com/moby/moby/client"
 	"github.com/sio/coolname"
+	queue "github.com/uddinArsalan/devdeploy/internals/adapters/messenger"
 	"github.com/uddinArsalan/devdeploy/internals/domain"
 	"github.com/uddinArsalan/devdeploy/internals/handlers/dto"
 	"github.com/uddinArsalan/devdeploy/internals/repository"
@@ -17,13 +18,15 @@ type DeployService struct {
 	client  *client.Client
 	projectRepo repository.ProjectRepository
 	deployRepo repository.DeploymentRepository
+	queue queue.Queue
 }
 
-func NewDeployService(client *client.Client,projectRepo repository.ProjectRepository,deployRepo repository.DeploymentRepository) *DeployService {
+func NewDeployService(client *client.Client,projectRepo repository.ProjectRepository,deployRepo repository.DeploymentRepository,queue queue.Queue) *DeployService {
 	return &DeployService{
 		client:  client,
 		projectRepo: projectRepo,
 		deployRepo : deployRepo,
+		queue: queue,
 	}
 }
 
@@ -52,6 +55,10 @@ func (ds *DeployService) Deploy(ctx context.Context, imageTag string,projectID i
 		ProjectID: projectID,
 		DeployID : deployID,
 		Slug: slug,
+	}
+
+	if err = ds.queue.PublishMessage(ctx,job); err != nil{
+		return nil,err
 	}
 
 	return &dto.DeployResponse{
