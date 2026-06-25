@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 
@@ -73,7 +72,6 @@ func (rm *RabbitMQAdapter) PublishMessage(ctx context.Context, job domain.BuildJ
 		log.Printf("Failed to publish a message: %v", err)
 		return err
 	}
-	fmt.Printf("Publishing to queue %q\n", rm.Queue)
 	res, err := publisher.Publish(ctx, &amqp.Message{
 		Data: [][]byte{data},
 	})
@@ -81,7 +79,6 @@ func (rm *RabbitMQAdapter) PublishMessage(ctx context.Context, job domain.BuildJ
 		log.Printf("Failed to publish a message: %v", err)
 		return err
 	}
-	fmt.Printf("Publish outcome: %#v\n", res.Outcome)
 	switch res.Outcome.(type) {
 	case *rmq.StateAccepted:
 	default:
