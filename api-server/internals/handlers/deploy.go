@@ -21,18 +21,17 @@ func NewDeployHandler(ds *services.DeployService) *DeployHandler {
 }
 
 func (h *DeployHandler) Deploy(w http.ResponseWriter, r *http.Request) {
-	// the respective code should move into a service
-	var url dto.UserURLReqDTO
+	var deployReq dto.DeployReqDTO
 	var imageTag = os.Getenv("IMAGE_TAG")
 
-	err := json.NewDecoder(r.Body).Decode(&url)
+	err := json.NewDecoder(r.Body).Decode(&deployReq)
 
 	if err != nil {
-		http.Error(w, "Invalid url", http.StatusBadRequest)
+		utils.FAIL(w,http.StatusBadRequest,"Invalid Project ID")
 		return
 	}
 
-	deployRes, err := h.ds.Deploy(r.Context(), imageTag, url)
+	deployRes, err := h.ds.Deploy(r.Context(), imageTag, deployReq.ProjectID)
 
 	if err != nil {
 		utils.FAIL(w, http.StatusInternalServerError, err.Error())
@@ -40,12 +39,13 @@ func (h *DeployHandler) Deploy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.SUCCESS(w, http.StatusOK, "Deploy started, The app will be available at the following url", dto.DeployResponse{
-		Url:      deployRes.Url,
+		DeployID: deployRes.DeployID,
+		URL:      deployRes.URL,
 	})
 }
 
 func (h *DeployHandler) StopDeploy(w http.ResponseWriter, r *http.Request) {
-	var deployIDReq dto.DeployReqDTO
+	var deployIDReq dto.StopDeployReqDTO
 	err := json.NewDecoder(r.Body).Decode(&deployIDReq)
 	if err != nil {
 		http.Error(w, "Error reading deploy id", http.StatusBadRequest)

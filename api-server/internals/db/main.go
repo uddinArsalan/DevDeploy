@@ -15,10 +15,11 @@ func NewDB(ctx context.Context) *pgxpool.Pool {
 	}
 	dbInstance, err := pgxpool.New(ctx, connStr)
 	if err != nil {
-		log.Fatalf("Critical error establishing database connection: %v", err)
+		log.Fatalf("Critical error establishing database connection: %q\n", err)
 	}
 	if err = dbInstance.Ping(ctx); err != nil {
-		log.Fatalf("Database was unreachable on initialization: %v", err)
+		log.Fatalf("Database was unreachable on initialization: %q\n", err)
 	}
+	
 	return dbInstance
 }

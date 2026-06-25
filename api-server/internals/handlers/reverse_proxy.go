@@ -18,7 +18,7 @@ func NewProxyHandler(proxyService *services.ProxyService) *ProxyHandler {
 }
 
 func (h *ProxyHandler) ReverseHandler(w http.ResponseWriter, r *http.Request) {
-	target, err := h.ps.Route(r.Host)
+	target, err := h.ps.Route(r.Context(),r.Host)
 	if err != nil {
 		http.NotFound(w, r)
 		return

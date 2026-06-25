@@ -1,4 +1,4 @@
-package worker
+package main
 
 import (
 	"bufio"
@@ -12,16 +12,21 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
+	"github.com/uddinArsalan/devdeploy/internals/adapters/cache"
+	queue "github.com/uddinArsalan/devdeploy/internals/adapters/messenger"
 	"github.com/uddinArsalan/devdeploy/internals/domain"
+	"github.com/uddinArsalan/devdeploy/internals/repository"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )
 
 type DeployWorker struct {
-	Id           string
-	wg           *sync.WaitGroup
-	jobBuildChan chan domain.BuildJob
-	client       *client.Client
-	portMap      *utils.PortMap
+	Id         int
+	wg         *sync.WaitGroup
+	client     *client.Client
+	portMap    *utils.PortMap
+	deployRepo *repository.DeploymentRepository
+	queue      queue.Queue
+	cache      cache.Cache
 }
 
 func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
@@ -29,31 +34,52 @@ func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("Stopping deploy worker")
+			fmt.Printf("Stopping deploy worker %d\n", w.Id)
 			return
-		case job, ok := <-w.jobBuildChan:
-			if !ok {
-				fmt.Printf("Worker %d: jobs channel closed, exiting\n", w.Id)
+		default:
+			consumer, err := w.queue.NewConsumer(ctx)
+			if err != nil {
+				fmt.Printf("Error creating consumer %v\n", err.Error())
 				return
 			}
-			err := w.processBuildJob(ctx, job)
+			job, err := consumer.ConsumeMessage(ctx)
 			if err != nil {
-				fmt.Printf("Error processing build job by worker %d", w.Id)
-				return
+				fmt.Printf("Error consuming message %v\n", err.Error())
+				continue
+			}
+			if err := w.cache.SetStatus(ctx, job.DeployID, domain.StatusBuilding); err != nil {
+				fmt.Printf("Error updating deployment status %v\n", err.Error())
+				continue
+			}
+
+			err = w.processBuildJob(ctx, job)
+			if err != nil {
+				fmt.Printf("Error processing build job by worker %d\n", w.Id)
+				if err := w.deployRepo.UpdateDeploymentStatus(ctx, job.DeployID, domain.StatusFailed); err != nil {
+					fmt.Printf("Error updating deployment status %v\n", err.Error())
+				}
+				if err := w.cache.SetStatus(ctx, job.DeployID, domain.StatusFailed); err != nil {
+					fmt.Printf("Error updating deployment status %v\n", err.Error())
+					continue
+				}
+				continue
 			}
 		}
 	}
 }
 
 func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob) error {
+	fmt.Printf("Processing worker by job %d\n", w.Id)
+
 	imageTag := os.Getenv("IMAGE_TAG")
 	dom := os.Getenv("DOMAIN")
+
 	appPort, _ := network.PortFrom(8000, "tcp")
+
 	port := w.portMap.GetPort()
 	if port == -1 {
 		return errors.New("No available ports to listen to")
 	}
-	var dynamicPort = strconv.FormatInt(port, 10)
 
 	hostName := fmt.Sprintf("%v.%v", job.Slug, dom)
 
@@ -87,10 +113,12 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 	waitRes := w.client.ContainerWait(ctx, res.ID, client.ContainerWaitOptions{})
 
 	select {
-	case <-waitRes.Result:
-		fmt.Print("\nBuild container completed successfully\n")
-	case <-waitRes.Error:
-		fmt.Printf("Build container error %v", waitRes.Error)
+	case result := <-waitRes.Result:
+		if result.StatusCode != 0 {
+			return fmt.Errorf("builder container exited with code %d", result.StatusCode)
+		}
+	case err := <-waitRes.Error:
+		return fmt.Errorf("builder container error: %v", err)
 	}
 
 	// APPLICATION CONTAINER :
@@ -106,14 +134,14 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 			PortBindings: network.PortMap{
 				appPort: []network.PortBinding{
 					{
-						HostPort: dynamicPort,
+						HostPort: strconv.Itoa(port),
 					},
 				},
 			},
 		},
 	})
 	if err != nil {
-		fmt.Printf("Error creating deployment container %v", err)
+		fmt.Printf("Error creating deployment container %v\n", err)
 		return err
 	}
 	_, err = w.client.ContainerStart(ctx, finalRes.ID, client.ContainerStartOptions{})
@@ -124,8 +152,16 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 
 	go w.streamLogs(finalRes.ID)
 
-	w.portMap.AssignProjectIDToDomain(job.ProjectID, hostName, finalRes.ID, dynamicPort)
-	return nil
+	if err := w.cache.SetHostName(ctx, hostName, port); err != nil {
+		fmt.Printf("Error setting hostname %v", err)
+		return err
+	}
+	
+	if err := w.cache.SetStatus(ctx, job.DeployID, domain.StatusRunning); err != nil {
+		fmt.Printf("Error updating deployment status %v\n", err.Error())
+		return err
+	}
+	return w.deployRepo.UpdateDeploymentRunning(ctx, port, finalRes.ID, domain.StatusRunning, job.DeployID)
 }
 
 func (w *DeployWorker) streamLogs(containerID string) {

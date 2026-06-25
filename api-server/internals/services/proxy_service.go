@@ -1,31 +1,31 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
 
-	"github.com/uddinArsalan/devdeploy/internals/utils"
+	"github.com/uddinArsalan/devdeploy/internals/adapters/cache"
 )
 
 type ProxyService struct {
-	portMap *utils.PortMap
+	cache cache.Cache
 }
 
-func NewProxyService(portMap *utils.PortMap) *ProxyService {
+func NewProxyService(cache cache.Cache) *ProxyService {
 	return &ProxyService{
-		portMap: portMap,
+		cache,
 	}
 }
 
-func (ps *ProxyService) Route(hostname string) (*url.URL, error) {
-	domain, ok := ps.portMap.PortMapping[hostname]
-	fmt.Printf("\nPORT MAP DOMAIN\n%v",domain)
-	if !ok {
+func (ps *ProxyService) Route(ctx context.Context, hostname string) (*url.URL, error) {
+	port, err := ps.cache.GetPort(ctx, hostname)
+	if err != nil {
 		return nil, errors.New("404 not found")
 	}
 
 	return url.Parse(
-		fmt.Sprintf("http://localhost:%v", domain.Port),
+		fmt.Sprintf("http://localhost:%v", port),
 	)
 }
