@@ -43,11 +43,13 @@ func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
 				return
 			}
 			job, err := consumer.ConsumeMessage(ctx)
+
 			if err != nil {
 				fmt.Printf("Error consuming message %v\n", err.Error())
 				continue
 			}
-			if err := w.cache.SetStatus(ctx, job.DeployID, domain.StatusBuilding); err != nil {
+
+			if err := w.publishStatus(ctx, job.DeployID, domain.StatusBuilding); err != nil {
 				fmt.Printf("Error updating deployment status %v\n", err.Error())
 				continue
 			}
@@ -58,7 +60,7 @@ func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
 				if err := w.deployRepo.UpdateDeploymentStatus(ctx, job.DeployID, domain.StatusFailed); err != nil {
 					fmt.Printf("Error updating deployment status %v\n", err.Error())
 				}
-				if err := w.cache.SetStatus(ctx, job.DeployID, domain.StatusFailed); err != nil {
+				if err := w.publishStatus(ctx, job.DeployID, domain.StatusFailed); err != nil {
 					fmt.Printf("Error updating deployment status %v\n", err.Error())
 					continue
 				}
@@ -108,7 +110,7 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 		return err
 	}
 
-	go w.streamLogs(res.ID)
+	go w.streamLogs(ctx, res.ID, job.DeployID)
 
 	waitRes := w.client.ContainerWait(ctx, res.ID, client.ContainerWaitOptions{})
 
@@ -150,21 +152,21 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 		return err
 	}
 
-	go w.streamLogs(finalRes.ID)
+	go w.streamLogs(ctx, finalRes.ID, job.DeployID)
 
 	if err := w.cache.SetHostName(ctx, hostName, port); err != nil {
 		fmt.Printf("Error setting hostname %v", err)
 		return err
 	}
-	
-	if err := w.cache.SetStatus(ctx, job.DeployID, domain.StatusRunning); err != nil {
+
+	if err := w.publishStatus(ctx, job.DeployID, domain.StatusRunning); err != nil {
 		fmt.Printf("Error updating deployment status %v\n", err.Error())
 		return err
 	}
 	return w.deployRepo.UpdateDeploymentRunning(ctx, port, finalRes.ID, domain.StatusRunning, job.DeployID)
 }
 
-func (w *DeployWorker) streamLogs(containerID string) {
+func (w *DeployWorker) streamLogs(ctx context.Context, containerID string, deployID int64) {
 	go func() {
 		logs, err := w.client.ContainerLogs(context.Background(), containerID, client.ContainerLogsOptions{
 			ShowStdout: true,
@@ -180,8 +182,14 @@ func (w *DeployWorker) streamLogs(containerID string) {
 
 		scanner := bufio.NewScanner(logs)
 		for scanner.Scan() {
-			// send logs through a Redis pub/sub
-			fmt.Println(scanner.Text())
+			w.cache.AppendLogsAndStatus(ctx, domain.Log, scanner.Text(), deployID)
 		}
 	}()
+}
+
+func (w *DeployWorker) publishStatus(ctx context.Context, deployID int64, status domain.DeploymentStatus) error {
+	if err := w.cache.AppendLogsAndStatus(ctx, domain.Status, string(status), deployID); err != nil {
+		return err
+	}
+	return w.cache.SetStatus(ctx, deployID, status)
 }
