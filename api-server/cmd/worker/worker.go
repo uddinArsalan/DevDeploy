@@ -42,7 +42,7 @@ func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
 				fmt.Printf("Error creating consumer %v\n", err.Error())
 				return
 			}
-			job, err := consumer.ConsumeMessage(ctx)
+			job, delivery, err := consumer.ConsumeMessage(ctx)
 
 			if err != nil {
 				fmt.Printf("Error consuming message %v\n", err.Error())
@@ -51,19 +51,22 @@ func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
 
 			if err := w.publishStatus(ctx, job.DeployID, domain.StatusBuilding); err != nil {
 				fmt.Printf("Error updating deployment status %v\n", err.Error())
+				_ = delivery.Retry(ctx)
 				continue
 			}
 
 			err = w.processBuildJob(ctx, job)
 			if err != nil {
 				fmt.Printf("Error processing build job by worker %d\n", w.Id)
-				if err := w.deployRepo.UpdateDeploymentStatus(ctx, job.DeployID, domain.StatusFailed); err != nil {
-					fmt.Printf("Error updating deployment status %v\n", err.Error())
-				}
-				if err := w.publishStatus(ctx, job.DeployID, domain.StatusFailed); err != nil {
-					fmt.Printf("Error updating deployment status %v\n", err.Error())
-					continue
-				}
+				_ = w.deployRepo.UpdateDeploymentStatus(ctx, job.DeployID, domain.StatusFailed)
+
+				_ = w.publishStatus(ctx, job.DeployID, domain.StatusFailed)
+
+				_ = delivery.Retry(ctx)
+				continue
+			}
+			if err = delivery.Ack(ctx); err != nil {
+				fmt.Printf("Error accepting the message %v", err)
 				continue
 			}
 		}
@@ -181,6 +184,10 @@ func (w *DeployWorker) streamLogs(ctx context.Context, containerID string, deplo
 		defer logs.Close()
 
 		scanner := bufio.NewScanner(logs)
+		if scanner.Err() != nil {
+			fmt.Printf("Error getting logs %v", err)
+			return
+		}
 		for scanner.Scan() {
 			w.cache.AppendLogsAndStatus(ctx, domain.Log, scanner.Text(), deployID)
 		}
