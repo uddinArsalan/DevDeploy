@@ -44,18 +44,6 @@ func NewRabbitMQClient(ctx context.Context) (*RabbitMQAdapter, error) {
 		log.Printf("Failed to connect to RabbitMQ: %v", err)
 		return nil, err
 	}
-	queue := os.Getenv("BUILD_QUEUE")
-	_, err = conn.Management().DeclareQueue(ctx, &rmq.QuorumQueueSpecification{
-		Name:                 queue,
-		DeliveryLimit:        3,
-		DeadLetterRoutingKey: "dead-letter",
-		DelayedRetryType:     rmq.QuorumQueueDelayedRetryFailed,
-		DelayedRetryMin:      1 * time.Second,
-	})
-	if err != nil {
-		log.Printf("Failed to declare a queue: %v", err)
-		return nil, err
-	}
 
 	_, err = conn.Management().DeclareQueue(ctx, &rmq.QuorumQueueSpecification{
 		Name: "dead-letter",
@@ -63,6 +51,27 @@ func NewRabbitMQClient(ctx context.Context) (*RabbitMQAdapter, error) {
 
 	if err != nil {
 		log.Printf("Failed to declare a dead letter queue: %v", err)
+		return nil, err
+	}
+
+	// warning (from docs)
+	// Hardcoded x-arguments are strongly recommended against since they cannot be updated
+	// without redeploying applications and deleting the queue before it can be redeclared,
+	// while policies can be updated at any moment.
+	queue := os.Getenv("BUILD_QUEUE")
+	_, err = conn.Management().DeclareQueue(ctx, &rmq.QuorumQueueSpecification{
+		Name:             queue,
+		DeliveryLimit:    3,
+		DelayedRetryType: rmq.QuorumQueueDelayedRetryFailed,
+		DelayedRetryMin:  1 * time.Second,
+		// Arguments: map[string]any{
+		// 	"x-dead-letter-exchange":    "",
+		// 	"x-dead-letter-routing-key": "dead-letter",
+		// },
+	})
+
+	if err != nil {
+		log.Printf("Failed to declare a queue: %v", err)
 		return nil, err
 	}
 
