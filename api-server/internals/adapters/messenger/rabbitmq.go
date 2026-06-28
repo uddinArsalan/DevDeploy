@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"time"
 
 	"github.com/Azure/go-amqp"
 	rmq "github.com/rabbitmq/rabbitmq-amqp-go-client/pkg/rabbitmqamqp"
@@ -44,11 +45,27 @@ func NewRabbitMQClient(ctx context.Context) (*RabbitMQAdapter, error) {
 		return nil, err
 	}
 	queue := os.Getenv("BUILD_QUEUE")
-	_, err = conn.Management().DeclareQueue(ctx, &rmq.QuorumQueueSpecification{Name: queue})
+	_, err = conn.Management().DeclareQueue(ctx, &rmq.QuorumQueueSpecification{
+		Name:                 queue,
+		DeliveryLimit:        3,
+		DeadLetterRoutingKey: "dead-letter",
+		DelayedRetryType:     rmq.QuorumQueueDelayedRetryFailed,
+		DelayedRetryMin:      1 * time.Second,
+	})
 	if err != nil {
 		log.Printf("Failed to declare a queue: %v", err)
 		return nil, err
 	}
+
+	_, err = conn.Management().DeclareQueue(ctx, &rmq.QuorumQueueSpecification{
+		Name: "dead-letter",
+	})
+
+	if err != nil {
+		log.Printf("Failed to declare a dead letter queue: %v", err)
+		return nil, err
+	}
+
 	return &RabbitMQAdapter{
 		rmqClient: conn,
 		Queue:     queue,
@@ -87,22 +104,42 @@ func (rm *RabbitMQAdapter) PublishMessage(ctx context.Context, job domain.BuildJ
 	return nil
 }
 
-func (rc *RabbitMQConsumer) ConsumeMessage(ctx context.Context) (domain.BuildJob, error) {
+type rabbitDelivery struct {
+	delivery rmq.IDeliveryContext
+}
+
+func (r *rabbitDelivery) Ack(ctx context.Context) error {
+	return r.delivery.Accept(ctx)
+}
+
+func (r *rabbitDelivery) Retry(ctx context.Context) error {
+	return r.delivery.RequeueWithAnnotationsAndDeliveryFailed(ctx, nil, true)
+}
+
+func (r *rabbitDelivery) Reject(ctx context.Context, description string) error {
+	return r.delivery.Discard(ctx, &amqp.Error{
+		Description: description,
+	})
+}
+
+func (r *rabbitDelivery) DelayRetry(ctx context.Context, delay time.Duration) error {
+	return r.delivery.DelayRetry(ctx, delay, true)
+}
+
+func (rc *RabbitMQConsumer) ConsumeMessage(ctx context.Context) (domain.BuildJob, Delivery, error) {
 	delivery, err := rc.consumer.Receive(ctx)
 	if err != nil {
 		log.Printf("Failed to receive a message: %v", err)
-		return domain.BuildJob{}, err
+		return domain.BuildJob{}, nil, err
 	}
 	msg := delivery.Message()
 	var job domain.BuildJob
 	if err = json.Unmarshal(msg.GetData(), &job); err != nil {
 		log.Printf("Failed to accept message: %v", err)
-		return domain.BuildJob{}, err
+		_ = delivery.Discard(ctx, &amqp.Error{
+			Description: "invalid json payload",
+		})
+		return domain.BuildJob{}, nil, err
 	}
-	err = delivery.Accept(ctx)
-	if err != nil {
-		log.Printf("Failed to accept message: %v", err)
-		return domain.BuildJob{}, err
-	}
-	return job, nil
+	return job, &rabbitDelivery{delivery: delivery}, nil
 }
