@@ -39,18 +39,22 @@ func (rdb *RedisClient) GetPort(ctx context.Context, hostname string) (int, erro
 	return rdb.rdb.Get(ctx, "deploy:"+hostname+":hostname").Int()
 }
 
+func (rdb *RedisClient) DelHostName(ctx context.Context, hostname string) error {
+	return rdb.rdb.Del(ctx, hostname).Err()
+}
+
 func (rdb *RedisClient) SetStatus(ctx context.Context, deployID int64, status domain.DeploymentStatus) error {
-    key := fmt.Sprintf("deploy:%d:status", deployID)
-    return rdb.rdb.Set(ctx, key, string(status), 2*time.Hour).Err()
+	key := fmt.Sprintf("deploy:%d:status", deployID)
+	return rdb.rdb.Set(ctx, key, string(status), 2*time.Hour).Err()
 }
 
 func (rdb *RedisClient) GetStatus(ctx context.Context, deployID int64) (domain.DeploymentStatus, error) {
-    key := fmt.Sprintf("deploy:%d:status", deployID)
-    val, err := rdb.rdb.Get(ctx, key).Result()
-    if err != nil {
-        return "", err
-    }
-    return domain.DeploymentStatus(val), nil
+	key := fmt.Sprintf("deploy:%d:status", deployID)
+	val, err := rdb.rdb.Get(ctx, key).Result()
+	if err != nil {
+		return "", err
+	}
+	return domain.DeploymentStatus(val), nil
 }
 
 func (rdb *RedisClient) AppendLogsAndStatus(ctx context.Context, logType domain.LogType, data interface{}, deployID int64) error {

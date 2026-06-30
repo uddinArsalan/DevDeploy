@@ -51,21 +51,32 @@ func main() {
 
 	projectRepo := repository.NewProjectRepo(dbClient)
 	deployRepo := repository.NewDeploymentRepo(dbClient)
-	proxyService := services.NewProxyService(cache)
+	envRepo := repository.NewEnvRepo(dbClient)
 
-	deployService := services.NewDeployService(newClient, *projectRepo, *deployRepo, queue)
+	deployService := services.NewDeployService(newClient, *projectRepo, *deployRepo, queue, cache)
 	projectService := services.NewProjectService(*projectRepo)
-	logStreamService := services.NewLogService(cache,sse,observers)
+	envService := services.NewEnvService(*envRepo)
+	proxyService := services.NewProxyService(cache)
+	logStreamService := services.NewLogService(cache, sse, observers)
 
+	proxyHandler := handlers.NewProxyHandler(proxyService)
 	projectHandler := handlers.NewProjectHandler(projectService)
 	deployHandler := handlers.NewDeployHandler(deployService)
-	proxyHandler := handlers.NewProxyHandler(proxyService)
 	logStreamHandler := handlers.NewLogHandler(logStreamService)
+	envHandler := handlers.NewEnvHandler(envService)
 
-	mux.Handle("POST /deploy", http.HandlerFunc(deployHandler.Deploy))
+	mux.Handle("/", http.HandlerFunc(proxyHandler.ReverseHandler))
+
 	mux.Handle("POST /project", http.HandlerFunc(projectHandler.CreateProject))
-	mux.Handle("GET /", http.HandlerFunc(proxyHandler.ReverseHandler))
+
 	mux.Handle("GET /stream/{deployID}", http.HandlerFunc(logStreamHandler.StreamLogsHandler))
+
+	mux.Handle("POST /projects/{projectID}/deployments", http.HandlerFunc(deployHandler.Deploy))
+	mux.Handle("POST /deployments/{deployID}/start", http.HandlerFunc(deployHandler.StartDeploy))
+	mux.Handle("POST /deployments/{deployID}/stop", http.HandlerFunc(deployHandler.StopDeploy))
+
+	mux.Handle("GET /projects/{projectID}/envs", http.HandlerFunc(envHandler.GetProjectEnvs))
+	mux.Handle("POST /projects/{projectID}/envs", http.HandlerFunc(envHandler.CreateEnvs))
 
 	server := &http.Server{
 		Addr:    ":3000",

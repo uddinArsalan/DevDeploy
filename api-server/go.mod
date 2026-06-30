@@ -10,7 +10,6 @@ require (
 	github.com/moby/moby/client v0.4.1
 	github.com/rabbitmq/rabbitmq-amqp-go-client v1.2.1-0.20260626091158-9b2bb8506f23
 	github.com/redis/go-redis/v9 v9.21.0
-	github.com/sio/coolname v0.1.0
 )
 
 require (

@@ -84,7 +84,7 @@ func (repo *DeploymentRepository) UpdateDeploymentRunning(ctx context.Context, p
 		`UPDATE deployments
 			SET port = $1,
 					container_id = $2,
-						status = $3,
+						status = $3
 			WHERE id = $4;
 			`
 	if _, err := repo.db.Exec(ctx, query, port, containerID, status,deployID); err != nil {

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 type APIResonse struct {
@@ -37,9 +38,14 @@ func FAIL(w http.ResponseWriter, status int, msg string) {
 }
 
 func GenerateRandomID() (string, error) {
-	bytes := make([]byte, 6)
+	bytes := make([]byte, 4)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func Slugify(name string) string {
+	fields := strings.Fields(strings.ToLower(name))
+	return strings.Join(fields, "-")
 }

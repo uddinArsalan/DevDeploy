@@ -19,6 +19,7 @@ type Dispatcher struct {
 	client       *client.Client
 	portMap      *utils.PortMap
 	deployRepo   *repository.DeploymentRepository
+	envRepo      *repository.EnvRepo
 	numOfWorkers int
 }
 
@@ -29,6 +30,7 @@ func NewDispatcher(
 	client *client.Client,
 	portMap *utils.PortMap,
 	deployRepo *repository.DeploymentRepository,
+	envRepo *repository.EnvRepo,
 	queue queue.Queue,
 	cache cache.Cache,
 ) *Dispatcher {
@@ -41,6 +43,7 @@ func NewDispatcher(
 		client,
 		portMap,
 		deployRepo,
+		envRepo,
 		numOfWorkers,
 	}
 }
@@ -56,6 +59,7 @@ func (d *Dispatcher) Start() {
 			deployRepo: d.deployRepo,
 			queue:      d.queue,
 			cache:      d.cache,
+			envRepo:    d.envRepo,
 		}
 		go w.DeployBuildWorker(d.ctx)
 	}

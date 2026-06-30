@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/uddinArsalan/devdeploy/internals/handlers/dto"
@@ -23,7 +22,6 @@ func NewProjectHandler(ps *services.ProjectService) *ProjectHandler {
 func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	var projectReq dto.ProjectReqDTO
 	err := json.NewDecoder(r.Body).Decode(&projectReq)
-	fmt.Printf("Project %v\n",err)
 	if err != nil {
 		utils.FAIL(w, http.StatusBadRequest, "Invalid Project Details")
 		return
