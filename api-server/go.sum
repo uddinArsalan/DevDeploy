@@ -76,8 +76,6 @@ github.com/rabbitmq/rabbitmq-amqp-go-client v1.2.1-0.20260626091158-9b2bb8506f23
 github.com/rabbitmq/rabbitmq-amqp-go-client v1.2.1-0.20260626091158-9b2bb8506f23/go.mod h1:XFTHmJXOLLoQPuQqvjJNePHlc+Oz73UAkgUpw2L8y5I=
 github.com/redis/go-redis/v9 v9.21.0 h1:FPBE4hhbAke+TLmcY3WkpbDffJEomdqPn3HYiqAtL9E=
 github.com/redis/go-redis/v9 v9.21.0/go.mod h1:v/M13XI1PVCDcm01VtPFOADfZtHf8YW3baQf57KlIkA=
-github.com/sio/coolname v0.1.0 h1:Hha2+NQ4dRb9pmWqGlPgu0PktZYuWPaoCJbGcbYSAsA=
-github.com/sio/coolname v0.1.0/go.mod h1:3Z0yllmTmmNnicHY0vr2mUpIw31Ts755TO/6rocFXeo=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=

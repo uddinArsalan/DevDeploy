@@ -22,7 +22,7 @@ func TestQueue(t *testing.T) {
 		ProjectID: 1,
 		GitURL:    "hello.github",
 		DeployID:  12,
-		Slug:      "hello-slug",
+		// Slug:      "hello-slug",
 	})
 	if err != nil {
 		t.Fatalf("error publishing message %v", err)

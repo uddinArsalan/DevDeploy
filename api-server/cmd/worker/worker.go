@@ -25,6 +25,7 @@ type DeployWorker struct {
 	client     *client.Client
 	portMap    *utils.PortMap
 	deployRepo *repository.DeploymentRepository
+	envRepo    *repository.EnvRepo
 	queue      queue.Queue
 	cache      cache.Cache
 }
@@ -57,7 +58,7 @@ func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
 
 			err = w.processBuildJob(ctx, job)
 			if err != nil {
-				fmt.Printf("Error processing build job by worker %d\n", w.Id)
+				fmt.Printf("Error processing build job by worker %d err %v\n", w.Id, err)
 				_ = w.deployRepo.UpdateDeploymentStatus(ctx, job.DeployID, domain.StatusFailed)
 
 				_ = w.publishStatus(ctx, job.DeployID, domain.StatusFailed)
@@ -77,16 +78,40 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 	fmt.Printf("Processing worker by job %d\n", w.Id)
 
 	imageTag := os.Getenv("IMAGE_TAG")
-	dom := os.Getenv("DOMAIN")
 
-	appPort, _ := network.PortFrom(8000, "tcp")
+	// need to validate job payload
+
+	envs, err := w.envRepo.GetProjectEnvs(ctx, job.ProjectID)
+	if err != nil {
+		return err
+	}
+	var isPortSpecified bool
+	var containerEnvs []string
+	var appPort = 8000
+	for _, env := range envs {
+		value, err := utils.Decrypt(env.EncryptedValue)
+		if err != nil {
+			continue
+		}
+		if env.Key == "PORT" {
+			p, err := strconv.Atoi(value)
+			if err != nil {
+				return fmt.Errorf("invalid PORT value: %q", value)
+			}
+			appPort = p
+			isPortSpecified = true
+		}
+		containerEnvs = append(containerEnvs, fmt.Sprintf("%v=%v", env.Key, value))
+	}
+	if !isPortSpecified {
+		containerEnvs = append(containerEnvs, fmt.Sprintf("PORT=%v", appPort))
+	}
+	tcpPort, _ := network.PortFrom(uint16(appPort), "tcp")
 
 	port := w.portMap.GetPort()
 	if port == -1 {
 		return errors.New("No available ports to listen to")
 	}
-
-	hostName := fmt.Sprintf("%v.%v", job.Slug, dom)
 
 	// BUILDER CONTAINER :
 	// this container will stop after building the image
@@ -130,14 +155,14 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 	finalRes, err := w.client.ContainerCreate(ctx, client.ContainerCreateOptions{
 		Image: fmt.Sprintf("deployment-image-%v", job.ProjectID),
 		Config: &container.Config{
-			Env:          []string{fmt.Sprintf("PORT=%v", appPort.Port())},
+			Env:          containerEnvs,
 			AttachStdout: true,
 			AttachStderr: true,
 			Tty:          true,
 		},
 		HostConfig: &container.HostConfig{
 			PortBindings: network.PortMap{
-				appPort: []network.PortBinding{
+				tcpPort: []network.PortBinding{
 					{
 						HostPort: strconv.Itoa(port),
 					},
@@ -157,7 +182,7 @@ func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob)
 
 	go w.streamLogs(ctx, finalRes.ID, job.DeployID)
 
-	if err := w.cache.SetHostName(ctx, hostName, port); err != nil {
+	if err := w.cache.SetHostName(ctx, job.Hostname, port); err != nil {
 		fmt.Printf("Error setting hostname %v", err)
 		return err
 	}

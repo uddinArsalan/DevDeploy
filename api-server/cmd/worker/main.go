@@ -36,14 +36,15 @@ func main() {
 		log.Fatalf("Error setting up docker client %q\n", err)
 	}
 
-	cache,err := cache.NewRedisClient(ctx)
-	if err != nil{
+	cache, err := cache.NewRedisClient(ctx)
+	if err != nil {
 		log.Fatalf("Redis client error %v\n", err)
 	}
 
 	portMap := utils.NewPortMap(10000, 20000)
 
 	deployRepo := repository.NewDeploymentRepo(dbClient)
+	envRepo := repository.NewEnvRepo(dbClient)
 
 	numOfWorkers := os.Getenv("NUM_OF_WORKERS")
 	numOfWorkersInt, err := strconv.Atoi(numOfWorkers)
@@ -52,7 +53,7 @@ func main() {
 	}
 
 	wg := sync.WaitGroup{}
-	dispatcher := NewDispatcher(&wg, ctx, numOfWorkersInt, newClient, portMap, deployRepo, queue,cache)
+	dispatcher := NewDispatcher(&wg, ctx, numOfWorkersInt, newClient, portMap, deployRepo, envRepo, queue, cache)
 	dispatcher.Start()
 	wg.Wait()
 }
