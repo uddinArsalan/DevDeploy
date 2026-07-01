@@ -83,7 +83,7 @@ func (ds *DeployService) StopDeploy(ctx context.Context, deployID int64) error {
 	if err != nil {
 		return err
 	}
-	_, err = ds.client.ContainerStop(ctx, deployment.ContainerID, client.ContainerStopOptions{})
+	_, err = ds.client.ContainerStop(ctx, *deployment.ContainerID, client.ContainerStopOptions{})
 	if err != nil {
 		return errors.New("There was an error stopping deploy request")
 	}
@@ -99,14 +99,18 @@ func (ds *DeployService) StartDeploy(ctx context.Context, deployID int64) error 
 	if err != nil {
 		return err
 	}
-	_, err = ds.client.ContainerStart(ctx, deployment.ContainerID, client.ContainerStartOptions{})
+	_, err = ds.client.ContainerStart(ctx, *deployment.ContainerID, client.ContainerStartOptions{})
 
 	if err != nil {
 		return errors.New("There was an error starting deploy request")
 	}
-	if err = ds.cache.SetHostName(ctx, deployment.HostName, deployment.Port); err != nil {
+	if err = ds.cache.SetHostName(ctx, deployment.HostName, *deployment.Port); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (ds *DeployService) GetDeployments(ctx context.Context,projectID int64) ([]domain.Deployment,error){
+	return ds.deployRepo.GetDeploymentsByProjectID(ctx,projectID);
 }

@@ -42,3 +42,17 @@ func ToEnvsReponse(envs []domain.Env) []dto.Env {
 	}
 	return userEnvs
 }
+
+func ToDeployResponse(deployments []domain.Deployment) []dto.DeploymentResponse {
+	var deployRes []dto.DeploymentResponse
+	for _, deploy := range deployments {
+		deployRes = append(deployRes, dto.DeploymentResponse{
+			ID:        deploy.ID,
+			HostName:  deploy.HostName,
+			Status:    deploy.Status,
+			CreatedAt: deploy.CreatedAt,
+			UpdatedAt: deploy.UpdatedAt,
+		})
+	}
+	return deployRes
+}

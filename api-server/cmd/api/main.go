@@ -71,6 +71,7 @@ func main() {
 
 	mux.Handle("GET /stream/{deployID}", http.HandlerFunc(logStreamHandler.StreamLogsHandler))
 
+	mux.Handle("GET /projects/{projectID}/deployments", http.HandlerFunc(deployHandler.GetDeployments))
 	mux.Handle("POST /projects/{projectID}/deployments", http.HandlerFunc(deployHandler.Deploy))
 	mux.Handle("POST /deployments/{deployID}/start", http.HandlerFunc(deployHandler.StartDeploy))
 	mux.Handle("POST /deployments/{deployID}/stop", http.HandlerFunc(deployHandler.StopDeploy))

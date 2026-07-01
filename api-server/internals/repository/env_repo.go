@@ -48,6 +48,7 @@ func (e *EnvRepo) GetProjectEnvs(ctx context.Context, projectID int64) ([]domain
 	if err != nil {
 		return []domain.Env{}, err
 	}
+	defer rows.Close()
 	var envArr []domain.Env
 	for rows.Next() {
 		var env domain.Env

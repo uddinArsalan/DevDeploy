@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/uddinArsalan/devdeploy/internals/handlers/dto"
+	"github.com/uddinArsalan/devdeploy/internals/handlers/dto/mapping"
 	"github.com/uddinArsalan/devdeploy/internals/services"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )
@@ -60,7 +62,7 @@ func (h *DeployHandler) StartDeploy(w http.ResponseWriter, r *http.Request) {
 	err = h.ds.StartDeploy(r.Context(), deployIDInt)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.FAIL(w, http.StatusInternalServerError, "error starting deploy")
 		return
 	}
 
@@ -82,9 +84,30 @@ func (h *DeployHandler) StopDeploy(w http.ResponseWriter, r *http.Request) {
 
 	err = h.ds.StopDeploy(r.Context(), deployIDInt)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.FAIL(w, http.StatusInternalServerError, "error stopping deploy")
 		return
 	}
 
 	utils.SUCCESS(w, http.StatusAccepted, "Deploy stopped", nil)
+}
+
+func (h *DeployHandler) GetDeployments(w http.ResponseWriter, r *http.Request) {
+	projectID := r.PathValue("projectID")
+	if projectID == "" {
+		utils.FAIL(w, http.StatusBadRequest, "missing project id")
+		return
+	}
+	projectIDInt, err := strconv.ParseInt(projectID, 10, 64)
+
+	if err != nil {
+		utils.FAIL(w, http.StatusBadRequest, "invalid project id")
+		return
+	}
+	deployments, err := h.ds.GetDeployments(r.Context(), projectIDInt)
+	if err != nil {
+		fmt.Printf("\nerror %v\n",err)
+		utils.FAIL(w, http.StatusInternalServerError, "error getting deployments")
+		return
+	}
+	utils.SUCCESS(w, http.StatusOK, "successfully fetched deployments", mapping.ToDeployResponse(deployments))
 }
