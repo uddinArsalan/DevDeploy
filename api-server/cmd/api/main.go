@@ -78,6 +78,8 @@ func main() {
 
 	mux.Handle("GET /projects/{projectID}/envs", http.HandlerFunc(envHandler.GetProjectEnvs))
 	mux.Handle("POST /projects/{projectID}/envs", http.HandlerFunc(envHandler.CreateEnvs))
+	mux.Handle("PATCH /projects/{projectID}/envs", http.HandlerFunc(envHandler.UpdateEnvs))
+	mux.Handle("DELETE /projects/{projectID}/envs/{id}", http.HandlerFunc(envHandler.DeleteEnv))
 
 	server := &http.Server{
 		Addr:    ":3000",

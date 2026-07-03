@@ -1,6 +1,8 @@
 package domain
 
-import "time"
+import (
+	"time"
+)
 
 type Env struct {
 	ID             int64
@@ -9,4 +11,10 @@ type Env struct {
 	ProjectID      int64
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+}
+
+type UpdateEnv struct {
+	ID             int64
+	Key            string
+	EncryptedValue []byte
 }

@@ -71,3 +71,61 @@ func (e *EnvHandler) GetProjectEnvs(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.SUCCESS(w, http.StatusOK, "envs fetched successfully", mapping.ToEnvsReponse(envs))
 }
+
+func (e *EnvHandler) UpdateEnvs(w http.ResponseWriter, r *http.Request) {
+	projectID := r.PathValue("projectID")
+	if projectID == "" {
+		utils.FAIL(w, http.StatusBadRequest, "missing project id")
+		return
+	}
+	projectIDInt, err := strconv.ParseInt(projectID, 10, 64)
+
+	if err != nil {
+		utils.FAIL(w, http.StatusBadRequest, "invalid project id")
+		return
+	}
+	var updateEnvDTO []dto.UpdateEnvDTO
+	if err := json.NewDecoder(r.Body).Decode(&updateEnvDTO); err != nil {
+		utils.FAIL(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+	if err := e.envService.UpdateEnvs(r.Context(), projectIDInt, mapping.ToUpdateEnvDomain(updateEnvDTO)); err != nil {
+		fmt.Printf("\nError updating envs %v\n", err)
+		utils.FAIL(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	utils.SUCCESS(w, http.StatusOK, "envs updated successfully", nil)
+}
+
+func (e *EnvHandler) DeleteEnv(w http.ResponseWriter,r *http.Request){
+	projectID := r.PathValue("projectID")
+	if projectID == "" {
+		utils.FAIL(w, http.StatusBadRequest, "missing project id")
+		return
+	}
+	projectIDInt, err := strconv.ParseInt(projectID, 10, 64)
+
+	if err != nil {
+		utils.FAIL(w, http.StatusBadRequest, "invalid project id")
+		return
+	}
+	envID := r.PathValue("id")
+	if projectID == "" {
+		utils.FAIL(w, http.StatusBadRequest, "missing project id")
+		return
+	}
+	envIDInt, err := strconv.ParseInt(envID, 10, 64)
+
+	if err != nil {
+		utils.FAIL(w, http.StatusBadRequest, "invalid env id")
+		return
+	}
+
+	if err := e.envService.DeleteEnv(r.Context(), projectIDInt,envIDInt); err != nil {
+		fmt.Printf("\nError deleting env %v\n", err)
+		utils.FAIL(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	utils.SUCCESS(w, http.StatusOK, "envs deleted successfully", nil)
+
+}
