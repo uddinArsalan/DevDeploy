@@ -72,14 +72,15 @@ func (e *EnvRepo) UpdateEnvs(ctx context.Context, projectID int64, updatedEnvs [
 	var args []any
 
 	for i, env := range updatedEnvs {
-		values = append(values, fmt.Sprintf("($%d, $%d)", 2*i+2, 2*i+3))
+		values = append(values, fmt.Sprintf("($%d::bigint, $%d::bytea)", 2*i+2, 2*i+3),)
 		args = append(args, env.ID, env.EncryptedValue)
 	}
 	query := fmt.Sprintf(`
 			UPDATE project_env_vars p
-			SET encrypted_value = u.encrypted_value
+			SET encrypted_value = u.encrypted_value,
+				updated_at = NOW()
 				FROM (
-    				VALUES %s
+    				VALUES %v
 					) AS u(id, encrypted_value)
 			WHERE p.project_id = $1
   					AND p.id = u.id;
