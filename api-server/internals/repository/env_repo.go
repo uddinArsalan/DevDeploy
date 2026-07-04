@@ -48,6 +48,7 @@ func (e *EnvRepo) GetProjectEnvs(ctx context.Context, projectID int64) ([]domain
 	if err != nil {
 		return []domain.Env{}, err
 	}
+	defer rows.Close()
 	var envArr []domain.Env
 	for rows.Next() {
 		var env domain.Env
@@ -61,4 +62,48 @@ func (e *EnvRepo) GetProjectEnvs(ctx context.Context, projectID int64) ([]domain
 		return nil, err
 	}
 	return envArr, nil
+}
+
+func (e *EnvRepo) UpdateEnvs(ctx context.Context, projectID int64, updatedEnvs []domain.UpdateEnv) error {
+	if len(updatedEnvs) == 0 {
+		return nil
+	}
+	var values []string
+	var args []any
+
+	for i, env := range updatedEnvs {
+		values = append(values, fmt.Sprintf("($%d::bigint, $%d::bytea)", 2*i+2, 2*i+3),)
+		args = append(args, env.ID, env.EncryptedValue)
+	}
+	query := fmt.Sprintf(`
+			UPDATE project_env_vars p
+			SET encrypted_value = u.encrypted_value,
+				updated_at = NOW()
+				FROM (
+    				VALUES %v
+					) AS u(id, encrypted_value)
+			WHERE p.project_id = $1
+  					AND p.id = u.id;
+			`, strings.Join(values, ","))
+
+	args = append([]any{projectID}, args...)
+
+	_, err := e.db.Exec(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e *EnvRepo) DeleteEnv(ctx context.Context, projectID int64, id int64) error {
+	query := `
+	DELETE FROM project_env_vars
+		WHERE id = $1
+  			AND project_id = $2;
+	`
+	_, err := e.db.Exec(ctx, query, id, projectID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -42,3 +42,33 @@ func ToEnvsReponse(envs []domain.Env) []dto.Env {
 	}
 	return userEnvs
 }
+
+func ToDeployResponse(deployments []domain.Deployment) []dto.DeploymentResponse {
+	var deployRes []dto.DeploymentResponse
+	for _, deploy := range deployments {
+		deployRes = append(deployRes, dto.DeploymentResponse{
+			ID:        deploy.ID,
+			HostName:  deploy.HostName,
+			Status:    deploy.Status,
+			CreatedAt: deploy.CreatedAt,
+			UpdatedAt: deploy.UpdatedAt,
+		})
+	}
+	return deployRes
+}
+
+func ToUpdateEnvDomain(envs []dto.UpdateEnvDTO) []domain.UpdateEnv {
+	var domainEnvs []domain.UpdateEnv
+	for _, env := range envs {
+		encryptedValue, err := utils.Encrypt(env.Value)
+		if err != nil {
+			continue
+		}
+		domainEnvs = append(domainEnvs, domain.UpdateEnv{
+			ID : env.ID,
+			Key:            env.Key,
+			EncryptedValue: encryptedValue,
+		})
+	}
+	return domainEnvs
+}

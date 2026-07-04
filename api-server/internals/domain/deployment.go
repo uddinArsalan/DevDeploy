@@ -8,10 +8,9 @@ type Deployment struct {
 	ID          int64
 	ProjectID   int64
 	HostName    string
-	Port        int
-	ContainerID string
+	Port        *int
+	ContainerID *string
 	Status      DeploymentStatus
-	RetryCount  int
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

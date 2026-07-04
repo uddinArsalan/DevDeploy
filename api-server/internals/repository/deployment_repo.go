@@ -53,7 +53,6 @@ func (repo *DeploymentRepository) GetDeploymentByID(ctx context.Context, deployI
     		port,
     		container_id,
     		status,
-    		retry_count,
     		created_at,
     		updated_at
 		FROM deployments
@@ -67,7 +66,6 @@ func (repo *DeploymentRepository) GetDeploymentByID(ctx context.Context, deployI
 		&deployment.Port,
 		&deployment.ContainerID,
 		&deployment.Status,
-		&deployment.RetryCount,
 		&deployment.CreatedAt,
 		&deployment.UpdatedAt,
 	); err != nil {
@@ -79,7 +77,7 @@ func (repo *DeploymentRepository) GetDeploymentByID(ctx context.Context, deployI
 	return deployment, nil
 }
 
-func (repo *DeploymentRepository) UpdateDeploymentRunning(ctx context.Context, port int, containerID string, status domain.DeploymentStatus,deployID int64) error {
+func (repo *DeploymentRepository) UpdateDeploymentRunning(ctx context.Context, port int, containerID string, status domain.DeploymentStatus, deployID int64) error {
 	query :=
 		`UPDATE deployments
 			SET port = $1,
@@ -87,8 +85,53 @@ func (repo *DeploymentRepository) UpdateDeploymentRunning(ctx context.Context, p
 						status = $3
 			WHERE id = $4;
 			`
-	if _, err := repo.db.Exec(ctx, query, port, containerID, status,deployID); err != nil {
+	if _, err := repo.db.Exec(ctx, query, port, containerID, status, deployID); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (repo *DeploymentRepository) GetDeploymentsByProjectID(ctx context.Context, projectID int64) ([]domain.Deployment, error) {
+	query :=
+		`SELECT
+    		id,
+    		project_id,
+  			hostname,
+    		port,
+    		container_id,
+    		status,
+    		created_at,
+    		updated_at
+		FROM deployments
+		WHERE project_id = $1
+		`
+
+	rows, err := repo.db.Query(ctx, query, projectID)
+	if err != nil {
+		return []domain.Deployment{}, err
+	}
+	defer rows.Close()
+
+	var deployments []domain.Deployment
+
+	for rows.Next() {
+		var deployment domain.Deployment
+		if err := rows.Scan(
+			&deployment.ID,
+			&deployment.ProjectID,
+			&deployment.HostName,
+			&deployment.Port,
+			&deployment.ContainerID,
+			&deployment.Status,
+			&deployment.CreatedAt,
+			&deployment.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		deployments = append(deployments, deployment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return deployments, nil
 }
