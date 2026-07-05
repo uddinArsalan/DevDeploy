@@ -1,0 +1,4 @@
+ALTER TABLE users
+    DROP COLUMN name,
+    ALTER COLUMN created_at DROP DEFAULT,
+    ALTER COLUMN created_at TYPE TIMESTAMP;

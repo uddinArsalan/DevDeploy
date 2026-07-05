@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/uddinArsalan/devdeploy/internals/handlers/dto"
-	"github.com/uddinArsalan/devdeploy/internals/handlers/dto/mapping"
+	"github.com/uddinArsalan/devdeploy/internals/dto"
+	"github.com/uddinArsalan/devdeploy/internals/dto/mapping"
 	"github.com/uddinArsalan/devdeploy/internals/services"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )
@@ -105,7 +105,7 @@ func (h *DeployHandler) GetDeployments(w http.ResponseWriter, r *http.Request) {
 	}
 	deployments, err := h.ds.GetDeployments(r.Context(), projectIDInt)
 	if err != nil {
-		fmt.Printf("\nerror %v\n",err)
+		fmt.Printf("\nerror %v\n", err)
 		utils.FAIL(w, http.StatusInternalServerError, "error getting deployments")
 		return
 	}

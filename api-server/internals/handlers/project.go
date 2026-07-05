@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/uddinArsalan/devdeploy/internals/handlers/dto"
+	"github.com/uddinArsalan/devdeploy/internals/dto"
 	"github.com/uddinArsalan/devdeploy/internals/services"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )

@@ -2,7 +2,7 @@ package mapping
 
 import (
 	"github.com/uddinArsalan/devdeploy/internals/domain"
-	"github.com/uddinArsalan/devdeploy/internals/handlers/dto"
+	"github.com/uddinArsalan/devdeploy/internals/dto"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )
 
@@ -65,7 +65,7 @@ func ToUpdateEnvDomain(envs []dto.UpdateEnvDTO) []domain.UpdateEnv {
 			continue
 		}
 		domainEnvs = append(domainEnvs, domain.UpdateEnv{
-			ID : env.ID,
+			ID:             env.ID,
 			Key:            env.Key,
 			EncryptedValue: encryptedValue,
 		})

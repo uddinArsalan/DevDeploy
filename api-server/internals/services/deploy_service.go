@@ -10,7 +10,7 @@ import (
 	"github.com/uddinArsalan/devdeploy/internals/adapters/cache"
 	queue "github.com/uddinArsalan/devdeploy/internals/adapters/messenger"
 	"github.com/uddinArsalan/devdeploy/internals/domain"
-	"github.com/uddinArsalan/devdeploy/internals/handlers/dto"
+	"github.com/uddinArsalan/devdeploy/internals/dto"
 	"github.com/uddinArsalan/devdeploy/internals/repository"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )
