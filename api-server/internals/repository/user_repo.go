@@ -17,10 +17,29 @@ func NewUserRepo(db *pgxpool.Pool) UserRepo {
 	}
 }
 
-func (u *UserRepo) CreateUser(ctx context.Context, userDetails domain.CreateUser) error {
+func (u *UserRepo) CreateUser(ctx context.Context, name string, email string, passwordHash string) error {
 	query := `
-			INSERT INTO users(name,email) VALUES ($1,$2)
+			INSERT INTO users(name,email,password_hash) VALUES ($1,$2)
 			`
-	_, err := u.db.Exec(ctx, query, userDetails.Name, userDetails.Email)
+	_, err := u.db.Exec(ctx, query, name, email, passwordHash)
 	return err
+}
+
+func (u *UserRepo) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	var user domain.User
+	query := `
+			SELECT id,name,email,role,password_hash,created_at,updated_at FROM users
+				WHERE email = $1
+			`
+	if err := u.db.QueryRow(ctx, query, email).Scan(&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.Role,
+		&user.PasswordHash,
+		&user.CreatedAt,
+		&user.UpdatedAt); err != nil {
+		return nil, err
+	}
+	return &user, nil
+
 }
