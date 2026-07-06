@@ -28,5 +28,4 @@ type User struct {
 	Role         UserRoles
 	PasswordHash string
 	CreatedAt    time.Time
-	UpdatedAt    time.Time
 }

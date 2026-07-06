@@ -17,16 +17,16 @@ import (
 
 type DeployService struct {
 	client      *client.Client
-	projectRepo repository.ProjectRepository
-	deployRepo  repository.DeploymentRepository
+	projectRepo *repository.ProjectRepository
+	deployRepo  *repository.DeploymentRepository
 	cache       cache.Cache
 	queue       queue.Queue
 }
 
 func NewDeployService(
 	client *client.Client,
-	projectRepo repository.ProjectRepository,
-	deployRepo repository.DeploymentRepository,
+	projectRepo *repository.ProjectRepository,
+	deployRepo *repository.DeploymentRepository,
 	queue queue.Queue,
 	cache cache.Cache) *DeployService {
 

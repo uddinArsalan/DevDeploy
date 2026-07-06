@@ -13,6 +13,7 @@ import (
 	"github.com/moby/moby/client"
 	"github.com/uddinArsalan/devdeploy/internals/adapters/cache"
 	queue "github.com/uddinArsalan/devdeploy/internals/adapters/messenger"
+	"github.com/uddinArsalan/devdeploy/internals/adapters/token"
 	"github.com/uddinArsalan/devdeploy/internals/db"
 	"github.com/uddinArsalan/devdeploy/internals/handlers"
 	"github.com/uddinArsalan/devdeploy/internals/repository"
@@ -52,18 +53,23 @@ func main() {
 	projectRepo := repository.NewProjectRepo(dbClient)
 	deployRepo := repository.NewDeploymentRepo(dbClient)
 	envRepo := repository.NewEnvRepo(dbClient)
+	userRepo := repository.NewUserRepo(dbClient)
+	refreshTokenRepo := repository.NewRefreshTokenRepo(dbClient)
+	jwtTokenStore := token.NewJwtToken()
 
-	deployService := services.NewDeployService(newClient, *projectRepo, *deployRepo, queue, cache)
-	projectService := services.NewProjectService(*projectRepo)
-	envService := services.NewEnvService(*envRepo)
+	deployService := services.NewDeployService(newClient, projectRepo, deployRepo, queue, cache)
+	projectService := services.NewProjectService(projectRepo)
+	envService := services.NewEnvService(envRepo)
 	proxyService := services.NewProxyService(cache)
 	logStreamService := services.NewLogService(cache, sse, observers)
+	authService := services.NewAuthService(userRepo, refreshTokenRepo, jwtTokenStore)
 
 	proxyHandler := handlers.NewProxyHandler(proxyService)
 	projectHandler := handlers.NewProjectHandler(projectService)
 	deployHandler := handlers.NewDeployHandler(deployService)
 	logStreamHandler := handlers.NewLogHandler(logStreamService)
 	envHandler := handlers.NewEnvHandler(envService)
+	authHandler := handlers.NewAuthHandler(authService)
 
 	mux.Handle("/", http.HandlerFunc(proxyHandler.ReverseHandler))
 
@@ -80,6 +86,10 @@ func main() {
 	mux.Handle("POST /projects/{projectID}/envs", http.HandlerFunc(envHandler.CreateEnvs))
 	mux.Handle("PATCH /projects/{projectID}/envs", http.HandlerFunc(envHandler.UpdateEnvs))
 	mux.Handle("DELETE /projects/{projectID}/envs/{id}", http.HandlerFunc(envHandler.DeleteEnv))
+
+	mux.Handle("POST /auth/signup", http.HandlerFunc(authHandler.Register))
+	mux.Handle("POST /auth/signin", http.HandlerFunc(authHandler.Login))
+	mux.Handle("POST /auth/refresh", http.HandlerFunc(authHandler.Refresh))
 
 	server := &http.Server{
 		Addr:    ":3000",

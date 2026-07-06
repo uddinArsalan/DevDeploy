@@ -28,7 +28,7 @@ func (u *LogChan) Notify(deployID int64, event domain.LogEvent) {
 	select {
 	case ch <- event:
 	default:
-		fmt.Printf("warn: log channel full for deploy %s, dropping line\n", deployID)
+		fmt.Printf("warn: log channel full for deploy %d, dropping line\n", deployID)
 	}
 }
 

@@ -4,6 +4,10 @@ A self-hosted Platform-as-a-Service (PaaS) written in Go. Point it at a Git repo
 
 **Stack:** Go · Docker SDK · Railpack · PostgreSQL · RabbitMQ (AMQP 1.0) · Redis · Cloudflare Tunnels
 
+## 🎥 Demo
+
+[![Watch Demo](https://img.shields.io/badge/▶-Watch%20Demo-blue?style=for-the-badge)](https://www.linkedin.com/posts/arsalan-uddin-2356b81b9_been-working-on-my-own-deployment-platform-ugcPost-7477046265424265216-DGdz/?utm_source=share&utm_medium=member_desktop&rcm=ACoAADLTykkBy_T2CHZTvU9LNd5sQESwutyG2aY)
+
 ---
 
 ## 1. High-Level Overview

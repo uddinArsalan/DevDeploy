@@ -43,7 +43,7 @@ func (jw *JwtToken) GenerateToken(userID int64, role domain.UserRoles, expiry ti
 	return token.SignedString([]byte(jw.secret))
 }
 
-func GenerateRefreshToken() (string, error) {
+func (jw *JwtToken) GenerateRefreshToken() (string, error) {
 	var token = make([]byte, 32)
 	_, err := rand.Read(token)
 	if err != nil {
