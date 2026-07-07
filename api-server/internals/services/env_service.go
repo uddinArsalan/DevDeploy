@@ -8,10 +8,10 @@ import (
 )
 
 type EnvService struct {
-	envRepo repository.EnvRepo
+	envRepo *repository.EnvRepo
 }
 
-func NewEnvService(envRepo repository.EnvRepo) *EnvService {
+func NewEnvService(envRepo *repository.EnvRepo) *EnvService {
 	return &EnvService{
 		envRepo: envRepo,
 	}

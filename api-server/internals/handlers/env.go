@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/uddinArsalan/devdeploy/internals/handlers/dto"
-	"github.com/uddinArsalan/devdeploy/internals/handlers/dto/mapping"
+	"github.com/uddinArsalan/devdeploy/internals/dto"
+	"github.com/uddinArsalan/devdeploy/internals/dto/mapping"
 	"github.com/uddinArsalan/devdeploy/internals/services"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )

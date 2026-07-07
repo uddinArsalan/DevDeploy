@@ -4,12 +4,14 @@ go 1.26.3
 
 require (
 	github.com/Azure/go-amqp v1.7.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/moby/moby/api v1.54.2
 	github.com/moby/moby/client v0.4.1
 	github.com/rabbitmq/rabbitmq-amqp-go-client v1.2.1-0.20260626091158-9b2bb8506f23
 	github.com/redis/go-redis/v9 v9.21.0
+	golang.org/x/crypto v0.53.0
 )
 
 require (
