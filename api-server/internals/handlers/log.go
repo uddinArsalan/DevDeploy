@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/uddinArsalan/devdeploy/internals/domain"
+	"github.com/uddinArsalan/devdeploy/internals/middlewares"
 	"github.com/uddinArsalan/devdeploy/internals/services"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )
@@ -21,6 +22,11 @@ func NewLogHandler(ls *services.LogService) *LogHandler {
 }
 
 func (lh *LogHandler) StreamLogsHandler(w http.ResponseWriter, r *http.Request) {
+	userClaim, ok := middlewares.UserFromContext(r.Context())
+	if !ok {
+		utils.FAIL(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 
 	deployID := r.PathValue("deployID")
 	if deployID == "" {
@@ -28,7 +34,7 @@ func (lh *LogHandler) StreamLogsHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	lastID := r.URL.Query().Get("lastID")
+	lastID := r.URL.Query().Get("last_id")
 	if lastID == "" {
 		lastID = "0"
 	}
@@ -51,8 +57,11 @@ func (lh *LogHandler) StreamLogsHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ch := lh.ls.StreamLogs(r.Context(), lastID, deployIDInt)
-
+	ch, err := lh.ls.StreamLogs(r.Context(), userClaim.UserID, lastID, deployIDInt)
+	if err != nil {
+		utils.FAIL(w, http.StatusInternalServerError, "invalid deploy id")
+		return
+	}
 	ctx := r.Context()
 
 	for {

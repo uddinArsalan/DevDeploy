@@ -1,0 +1,5 @@
+ALTER TABLE projects
+    ADD COLUMN user_id BIGINT NOT NULL DEFAULT 3 REFERENCES users(id);
+
+ALTER TABLE projects
+    ALTER COLUMN user_id DROP DEFAULT;

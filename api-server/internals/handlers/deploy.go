@@ -7,6 +7,7 @@ import (
 
 	"github.com/uddinArsalan/devdeploy/internals/dto"
 	"github.com/uddinArsalan/devdeploy/internals/dto/mapping"
+	"github.com/uddinArsalan/devdeploy/internals/middlewares"
 	"github.com/uddinArsalan/devdeploy/internals/services"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )
@@ -22,6 +23,11 @@ func NewDeployHandler(ds *services.DeployService) *DeployHandler {
 }
 
 func (h *DeployHandler) Deploy(w http.ResponseWriter, r *http.Request) {
+	userClaim, ok := middlewares.UserFromContext(r.Context())
+	if !ok {
+		utils.FAIL(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	projectID := r.PathValue("projectID")
 	if projectID == "" {
 		utils.FAIL(w, http.StatusBadRequest, "missing project id")
@@ -34,7 +40,7 @@ func (h *DeployHandler) Deploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deployRes, err := h.ds.Deploy(r.Context(), projectIDInt)
+	deployRes, err := h.ds.Deploy(r.Context(), userClaim.UserID, projectIDInt)
 
 	if err != nil {
 		utils.FAIL(w, http.StatusInternalServerError, err.Error())
@@ -48,6 +54,11 @@ func (h *DeployHandler) Deploy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DeployHandler) StartDeploy(w http.ResponseWriter, r *http.Request) {
+	userClaim, ok := middlewares.UserFromContext(r.Context())
+	if !ok {
+		utils.FAIL(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	deployID := r.PathValue("deployID")
 	if deployID == "" {
 		utils.FAIL(w, http.StatusBadRequest, "missing deploy id")
@@ -59,7 +70,7 @@ func (h *DeployHandler) StartDeploy(w http.ResponseWriter, r *http.Request) {
 		utils.FAIL(w, http.StatusBadRequest, "invalid deploy id")
 		return
 	}
-	err = h.ds.StartDeploy(r.Context(), deployIDInt)
+	err = h.ds.StartDeploy(r.Context(), userClaim.UserID, deployIDInt)
 
 	if err != nil {
 		utils.FAIL(w, http.StatusInternalServerError, "error starting deploy")
@@ -70,6 +81,11 @@ func (h *DeployHandler) StartDeploy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DeployHandler) StopDeploy(w http.ResponseWriter, r *http.Request) {
+	userClaim, ok := middlewares.UserFromContext(r.Context())
+	if !ok {
+		utils.FAIL(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	deployID := r.PathValue("deployID")
 	if deployID == "" {
 		utils.FAIL(w, http.StatusBadRequest, "missing deploy id")
@@ -82,7 +98,7 @@ func (h *DeployHandler) StopDeploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.ds.StopDeploy(r.Context(), deployIDInt)
+	err = h.ds.StopDeploy(r.Context(), userClaim.UserID, deployIDInt)
 	if err != nil {
 		utils.FAIL(w, http.StatusInternalServerError, "error stopping deploy")
 		return
@@ -92,6 +108,11 @@ func (h *DeployHandler) StopDeploy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DeployHandler) GetDeployments(w http.ResponseWriter, r *http.Request) {
+	userClaim, ok := middlewares.UserFromContext(r.Context())
+	if !ok {
+		utils.FAIL(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	projectID := r.PathValue("projectID")
 	if projectID == "" {
 		utils.FAIL(w, http.StatusBadRequest, "missing project id")
@@ -103,7 +124,7 @@ func (h *DeployHandler) GetDeployments(w http.ResponseWriter, r *http.Request) {
 		utils.FAIL(w, http.StatusBadRequest, "invalid project id")
 		return
 	}
-	deployments, err := h.ds.GetDeployments(r.Context(), projectIDInt)
+	deployments, err := h.ds.GetDeployments(r.Context(), userClaim.UserID, projectIDInt)
 	if err != nil {
 		fmt.Printf("\nerror %v\n", err)
 		utils.FAIL(w, http.StatusInternalServerError, "error getting deployments")
