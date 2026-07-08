@@ -31,10 +31,10 @@ func (repo *ProjectRepository) CreateProject(ctx context.Context, name string, g
 	return projectID, nil
 }
 
-func (repo *ProjectRepository) GetProjectByID(ctx context.Context, projectID int64) (domain.Project, error) {
-	query := "SELECT id,name,git_url,created_at FROM projects WHERE id=$1"
+func (repo *ProjectRepository) GetProjectByID(ctx context.Context, userID int64, projectID int64) (domain.Project, error) {
+	query := "SELECT id,name,git_url,created_at FROM projects WHERE id=$1 AND user_id = $2"
 	var project domain.Project
-	if err := repo.db.QueryRow(ctx, query, projectID).Scan(&project.ID, &project.Name, &project.GitUrl, &project.CreatedAt); err != nil {
+	if err := repo.db.QueryRow(ctx, query, projectID, userID).Scan(&project.ID, &project.Name, &project.GitUrl, &project.CreatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Project{}, ErrProjectNotFound
 		}

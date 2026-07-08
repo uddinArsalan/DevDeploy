@@ -8,6 +8,7 @@ import (
 
 	"github.com/uddinArsalan/devdeploy/internals/dto"
 	"github.com/uddinArsalan/devdeploy/internals/dto/mapping"
+	"github.com/uddinArsalan/devdeploy/internals/middlewares"
 	"github.com/uddinArsalan/devdeploy/internals/services"
 	"github.com/uddinArsalan/devdeploy/internals/utils"
 )
@@ -52,6 +53,11 @@ func (e *EnvHandler) CreateEnvs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *EnvHandler) GetProjectEnvs(w http.ResponseWriter, r *http.Request) {
+	userClaim, ok := middlewares.UserFromContext(r.Context())
+	if !ok {
+		utils.FAIL(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	projectID := r.PathValue("projectID")
 	if projectID == "" {
 		utils.FAIL(w, http.StatusBadRequest, "missing project id")
@@ -63,7 +69,7 @@ func (e *EnvHandler) GetProjectEnvs(w http.ResponseWriter, r *http.Request) {
 		utils.FAIL(w, http.StatusBadRequest, "invalid project id")
 		return
 	}
-	envs, err := e.envService.GetProjectEnvs(r.Context(), projectIDInt)
+	envs, err := e.envService.GetProjectEnvs(r.Context(), userClaim.UserID, projectIDInt)
 	if err != nil {
 		fmt.Printf("\nError fetching envs %v\n", err)
 		utils.FAIL(w, http.StatusInternalServerError, "Internal Server Error")
@@ -73,6 +79,11 @@ func (e *EnvHandler) GetProjectEnvs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *EnvHandler) UpdateEnvs(w http.ResponseWriter, r *http.Request) {
+	userClaim, ok := middlewares.UserFromContext(r.Context())
+	if !ok {
+		utils.FAIL(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	projectID := r.PathValue("projectID")
 	if projectID == "" {
 		utils.FAIL(w, http.StatusBadRequest, "missing project id")
@@ -89,7 +100,7 @@ func (e *EnvHandler) UpdateEnvs(w http.ResponseWriter, r *http.Request) {
 		utils.FAIL(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
-	if err := e.envService.UpdateEnvs(r.Context(), projectIDInt, mapping.ToUpdateEnvDomain(updateEnvDTO)); err != nil {
+	if err := e.envService.UpdateEnvs(r.Context(), userClaim.UserID, projectIDInt, mapping.ToUpdateEnvDomain(updateEnvDTO)); err != nil {
 		fmt.Printf("\nError updating envs %v\n", err)
 		utils.FAIL(w, http.StatusInternalServerError, "Internal Server Error")
 		return
@@ -97,7 +108,12 @@ func (e *EnvHandler) UpdateEnvs(w http.ResponseWriter, r *http.Request) {
 	utils.SUCCESS(w, http.StatusOK, "envs updated successfully", nil)
 }
 
-func (e *EnvHandler) DeleteEnv(w http.ResponseWriter,r *http.Request){
+func (e *EnvHandler) DeleteEnv(w http.ResponseWriter, r *http.Request) {
+	userClaim, ok := middlewares.UserFromContext(r.Context())
+	if !ok {
+		utils.FAIL(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	projectID := r.PathValue("projectID")
 	if projectID == "" {
 		utils.FAIL(w, http.StatusBadRequest, "missing project id")
@@ -121,11 +137,10 @@ func (e *EnvHandler) DeleteEnv(w http.ResponseWriter,r *http.Request){
 		return
 	}
 
-	if err := e.envService.DeleteEnv(r.Context(), projectIDInt,envIDInt); err != nil {
+	if err := e.envService.DeleteEnv(r.Context(), userClaim.UserID, projectIDInt, envIDInt); err != nil {
 		fmt.Printf("\nError deleting env %v\n", err)
 		utils.FAIL(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	utils.SUCCESS(w, http.StatusOK, "envs deleted successfully", nil)
-
 }

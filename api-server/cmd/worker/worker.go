@@ -32,17 +32,17 @@ type DeployWorker struct {
 
 func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
 	defer w.wg.Done()
+	consumer, err := w.queue.NewConsumer(ctx)
+	if err != nil {
+		fmt.Printf("Error creating consumer %v\n", err.Error())
+		return
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Printf("Stopping deploy worker %d\n", w.Id)
 			return
 		default:
-			consumer, err := w.queue.NewConsumer(ctx)
-			if err != nil {
-				fmt.Printf("Error creating consumer %v\n", err.Error())
-				return
-			}
 			job, delivery, err := consumer.ConsumeMessage(ctx)
 
 			if err != nil {
@@ -75,7 +75,17 @@ func (w *DeployWorker) DeployBuildWorker(ctx context.Context) {
 }
 
 func (w *DeployWorker) processBuildJob(ctx context.Context, job domain.BuildJob) error {
-	fmt.Printf("Processing worker by job %d\n", w.Id)
+	fmt.Printf("Worker %d processing deploy=%d project=%d\n",
+		w.Id, job.DeployID, job.ProjectID)
+
+	deployment, err := w.deployRepo.GetDeploymentByID(ctx, job.DeployID)
+	if err != nil {
+		return err
+	}
+
+	if deployment.ProjectID != job.ProjectID {
+		return errors.New("deployment does not belong to project")
+	}
 
 	imageTag := os.Getenv("IMAGE_TAG")
 

@@ -39,8 +39,8 @@ func NewDeployService(
 	}
 }
 
-func (ds *DeployService) Deploy(ctx context.Context, projectID int64) (*dto.DeployResponse, error) {
-	project, err := ds.projectRepo.GetProjectByID(ctx, projectID)
+func (ds *DeployService) Deploy(ctx context.Context, userID int64, projectID int64) (*dto.DeployResponse, error) {
+	project, err := ds.projectRepo.GetProjectByID(ctx, userID, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (ds *DeployService) Deploy(ctx context.Context, projectID int64) (*dto.Depl
 		GitURL:    project.GitUrl,
 		ProjectID: projectID,
 		DeployID:  deployID,
-		Hostname:      hostname,
+		Hostname:  hostname,
 	}
 
 	if err = ds.queue.PublishMessage(ctx, job); err != nil {
@@ -78,11 +78,16 @@ func (ds *DeployService) Deploy(ctx context.Context, projectID int64) (*dto.Depl
 	}, err
 }
 
-func (ds *DeployService) StopDeploy(ctx context.Context, deployID int64) error {
+func (ds *DeployService) StopDeploy(ctx context.Context, userID, deployID int64) error {
 	deployment, err := ds.deployRepo.GetDeploymentByID(ctx, deployID)
 	if err != nil {
 		return err
 	}
+	_, err = ds.projectRepo.GetProjectByID(ctx, userID, deployment.ProjectID)
+	if err != nil {
+		return err
+	}
+
 	_, err = ds.client.ContainerStop(ctx, *deployment.ContainerID, client.ContainerStopOptions{})
 	if err != nil {
 		return errors.New("There was an error stopping deploy request")
@@ -93,12 +98,18 @@ func (ds *DeployService) StopDeploy(ctx context.Context, deployID int64) error {
 	return ds.cache.DelHostName(ctx, deployment.HostName)
 }
 
-func (ds *DeployService) StartDeploy(ctx context.Context, deployID int64) error {
+func (ds *DeployService) StartDeploy(ctx context.Context, userID, deployID int64) error {
 	deployment, err := ds.deployRepo.GetDeploymentByID(ctx, deployID)
 
 	if err != nil {
 		return err
 	}
+
+	_, err = ds.projectRepo.GetProjectByID(ctx, userID, deployment.ProjectID)
+	if err != nil {
+		return err
+	}
+
 	_, err = ds.client.ContainerStart(ctx, *deployment.ContainerID, client.ContainerStartOptions{})
 
 	if err != nil {
@@ -111,6 +122,10 @@ func (ds *DeployService) StartDeploy(ctx context.Context, deployID int64) error 
 	return nil
 }
 
-func (ds *DeployService) GetDeployments(ctx context.Context,projectID int64) ([]domain.Deployment,error){
-	return ds.deployRepo.GetDeploymentsByProjectID(ctx,projectID);
+func (ds *DeployService) GetDeployments(ctx context.Context, userID, projectID int64) ([]domain.Deployment, error) {
+	userProject, err := ds.projectRepo.GetProjectByID(ctx, userID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	return ds.deployRepo.GetDeploymentsByProjectID(ctx, userProject.ID)
 }

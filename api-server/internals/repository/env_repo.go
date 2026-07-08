@@ -72,7 +72,7 @@ func (e *EnvRepo) UpdateEnvs(ctx context.Context, projectID int64, updatedEnvs [
 	var args []any
 
 	for i, env := range updatedEnvs {
-		values = append(values, fmt.Sprintf("($%d::bigint, $%d::bytea)", 2*i+2, 2*i+3),)
+		values = append(values, fmt.Sprintf("($%d::bigint, $%d::bytea)", 2*i+2, 2*i+3))
 		args = append(args, env.ID, env.EncryptedValue)
 	}
 	query := fmt.Sprintf(`
