@@ -25,7 +25,7 @@ export function setup() {
   for (let i = 0; i < 10; i++) {
     const payload = {
       email: `load-user-${i}@example.com`,
-      password: `LoadTest@753_${i}`,
+      password: `LOAD_TEST_ONLY_${i}`,
     };
     // ----- REGISTER ------
     const regRes = http.post(
