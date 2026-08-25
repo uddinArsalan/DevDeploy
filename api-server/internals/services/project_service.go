@@ -17,8 +17,8 @@ func NewProjectService(projectRepo *repository.ProjectRepository) *ProjectServic
 	}
 }
 
-func (ps *ProjectService) CreateProject(ctx context.Context, name string, gitUrl string) (domain.CreateProjectResult, error) {
-	projectId, err := ps.projectRepo.CreateProject(ctx, name, gitUrl)
+func (ps *ProjectService) CreateProject(ctx context.Context, userID int64, name string, gitUrl string) (domain.CreateProjectResult, error) {
+	projectId, err := ps.projectRepo.CreateProject(ctx,userID, name, gitUrl)
 	if err != nil {
 		return domain.CreateProjectResult{}, err
 	}

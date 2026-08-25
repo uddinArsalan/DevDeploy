@@ -21,11 +21,11 @@ func NewProjectRepo(db *pgxpool.Pool) *ProjectRepository {
 
 var ErrProjectNotFound = errors.New("project not found")
 
-func (repo *ProjectRepository) CreateProject(ctx context.Context, name string, gitUrl string) (int64, error) {
+func (repo *ProjectRepository) CreateProject(ctx context.Context, userID int64, name string, gitUrl string) (int64, error) {
 	query :=
-		"INSERT INTO projects (name,git_url) VALUES ($1,$2) RETURNING id;"
+		"INSERT INTO projects (name,git_url,user_id) VALUES ($1,$2,$3) RETURNING id;"
 	var projectID int64
-	if err := repo.db.QueryRow(ctx, query, name, gitUrl).Scan(&projectID); err != nil {
+	if err := repo.db.QueryRow(ctx, query, name, gitUrl, userID).Scan(&projectID); err != nil {
 		return -1, err
 	}
 	return projectID, nil
